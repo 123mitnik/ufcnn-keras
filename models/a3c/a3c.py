@@ -29,14 +29,14 @@ from constants import USE_LSTM
 
 
 def log_uniform(lo, hi, rate):
-  log_lo = math.log(lo)
-  log_hi = math.log(hi)
-  v = log_lo * (1-rate) + log_hi * rate
-  return math.exp(v)
+    log_lo = math.log(lo)
+    log_hi = math.log(hi)
+    v = log_lo * (1-rate) + log_hi * rate
+    return math.exp(v)
 
 device = "/cpu:0"
 if USE_GPU:
-  device = "/gpu:0"
+    device = "/gpu:0"
 
 print("Conf: USING Device ",device)
 
@@ -49,9 +49,9 @@ global_t = 0
 stop_requested = False
 
 if USE_LSTM:
-  global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
+    global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
 else:
-  global_network = GameACFFNetwork(ACTION_SIZE, device)
+    global_network = GameACFFNetwork(ACTION_SIZE, device)
 
 
 training_threads = []
@@ -67,11 +67,11 @@ grad_applier = RMSPropApplier(learning_rate = learning_rate_input,
 print("Conf: PARALLEL_SIZE: ", PARALLEL_SIZE)
 
 for i in range(PARALLEL_SIZE):
-  training_thread = A3CTrainingThread(i, global_network, initial_learning_rate,
-                                      learning_rate_input,
-                                      grad_applier, MAX_TIME_STEP,
-                                      device = device)
-  training_threads.append(training_thread)
+    training_thread = A3CTrainingThread(i, global_network, initial_learning_rate,
+                                        learning_rate_input,
+                                        grad_applier, MAX_TIME_STEP,
+                                        device = device)
+    training_threads.append(training_thread)
 
 # prepare session
 sess = tf.Session(config=tf.ConfigProto(log_device_placement=False,
@@ -91,61 +91,60 @@ summary_writer = tf.train.SummaryWriter(LOG_FILE, sess.graph)
 saver = tf.train.Saver()
 checkpoint = tf.train.get_checkpoint_state(CHECKPOINT_DIR)
 if checkpoint and checkpoint.model_checkpoint_path:
-  saver.restore(sess, checkpoint.model_checkpoint_path)
-  print ("Conf: checkpoint loaded:", checkpoint.model_checkpoint_path)
-  tokens = checkpoint.model_checkpoint_path.split("-")
-  # set global step
-  global_t = int(tokens[1])
-  print (">>> global step set: ", global_t)
+    saver.restore(sess, checkpoint.model_checkpoint_path)
+    print ("Conf: checkpoint loaded:", checkpoint.model_checkpoint_path)
+    tokens = checkpoint.model_checkpoint_path.split("-")
+    # set global step
+    global_t = int(tokens[1])
+    print (">>> global step set: ", global_t)
 else:
-  print ("Conf: Could not find old checkpoint")
+    print ("Conf: Could not find old checkpoint")
 
 
 def train_function(parallel_index):
-  global global_t
-  
-  training_thread = training_threads[parallel_index]
+    global global_t
 
-  while True:
-    if stop_requested:
-      break
-    if global_t > MAX_TIME_STEP:
-      break
+    training_thread = training_threads[parallel_index]
 
-    diff_global_t = training_thread.process(sess, global_t, summary_writer,
-                                            summary_op, score_input)
-    global_t += diff_global_t
-    
-    
+    while True:
+        if stop_requested:
+            break
+        if global_t > MAX_TIME_STEP:
+            break
+
+        diff_global_t = training_thread.process(sess, global_t, summary_writer,
+                                                summary_op, score_input)
+        global_t += diff_global_t
+
+
 def signal_handler(signal, frame):
-  global stop_requested
-  print('Conf: You pressed Ctrl+C!')
-  stop_requested = True
-  
+    global stop_requested
+    print('Conf: You pressed Ctrl+C!')
+    stop_requested = True
+
 train_threads = []
 start_time = time.time()
 for i in range(PARALLEL_SIZE):
-  train_threads.append(threading.Thread(target=train_function, args=(i,)))
-  
+    train_threads.append(threading.Thread(target=train_function, args=(i,)))
+
 signal.signal(signal.SIGINT, signal_handler)
 
 for t in train_threads:
-  t.start()
+    t.start()
 
 print('Press Ctrl+C to stop')
 signal.pause()
 
 print('Conf: Now saving data. Please wait. Steps:', global_t)
-  
+
 for t in train_threads:
-  t.join()
+    t.join()
 
 if not os.path.exists(CHECKPOINT_DIR):
-  os.mkdir(CHECKPOINT_DIR)  
+    os.mkdir(CHECKPOINT_DIR)
 
 saver.save(sess, CHECKPOINT_DIR + '/' + 'checkpoint', global_step = global_t)
 end_time = time.time()
 
 print("Total Time: ", end_time-start_time, ", per Timestep: ", (end_time-start_time)/global_t)
-
 
