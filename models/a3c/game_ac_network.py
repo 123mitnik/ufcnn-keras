@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 from custom_lstm import CustomBasicLSTMCell
+from constants import FEATURES_LIST, SEQUENCE_LENGTH
 
 # Actor-Critic Network Base Class
 # (Policy network and Value network)
@@ -169,9 +170,10 @@ class GameACLSTMNetwork(GameACNetwork):
                thread_index, # -1 for global
                device="/cpu:0" ):
     GameACNetwork.__init__(self, action_size, device)    
+    print("Initializing Network ")
 
     with tf.device(self._device):
-      self.W_conv1 = self._conv_weight_variable([8, 1, 4, 16])  # stride=4
+      self.W_conv1 = self._conv_weight_variable([8, 1, len(FEATURES_LIST), 16])  # stride=4
       self.b_conv1 = self._conv_bias_variable([16], 8, 1, 1)
 
       self.W_conv2 = self._conv_weight_variable([1, 1, 16, 32]) # stride=2
@@ -193,7 +195,7 @@ class GameACLSTMNetwork(GameACNetwork):
 
       # state (input)
       #self.s = tf.placeholder("float", [None, 84, 84, 4])
-      self.s = tf.placeholder("float", [None, 168, 1, 4])
+      self.s = tf.placeholder("float", [None, SEQUENCE_LENGTH, 1, len(FEATURES_LIST)])
     
       h_conv1 = tf.nn.relu(self._conv2d(self.s, self.W_conv1, 1) + self.b_conv1)
       h_conv2 = tf.nn.relu(self._conv2d(h_conv1, self.W_conv2, 2) + self.b_conv2)
@@ -241,6 +243,7 @@ class GameACLSTMNetwork(GameACNetwork):
       print("SHAPE ", self.v)
 
       self.reset_state()
+      print("Initializing Network finished")
       
   def reset_state(self):
     self.lstm_state_out = np.zeros([1, self.lstm.state_size])
