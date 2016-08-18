@@ -40,7 +40,7 @@ testing_days = TESTING_DAYS
 total_pnl = 0
 
 for i in range(testing_days):
-    print("Working on day ",i)
+    print("Working on day ", i)
     terminal = False
     daily_pnl = 0
 
@@ -55,7 +55,6 @@ for i in range(testing_days):
         game_state.process(action)
 
         reward = game_state.reward
-
         terminal = game_state.terminal
 
         game_state.update()
@@ -65,11 +64,11 @@ for i in range(testing_days):
     total_pnl += daily_pnl
     game_state.environment.daily_pnl = 0
 
-    print("Day ",i, ",Realized PnL: ", daily_pnl)
+    print("Day ", i, ",Realized PnL: ", daily_pnl)
+    
 print("Total Realized PnL: ", total_pnl)
 
 
 for i in range(testing_days):
-    print("Potting day ",i)
-    
+    print("Potting day ", i)
 
