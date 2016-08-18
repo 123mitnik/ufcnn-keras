@@ -2,7 +2,10 @@ import numpy as np
 
 # Sample from the policy distribution
 # (requires pi_values to be a normalized probabilities vector)
-def choose_action(pi_values):
+def choose_action(pi_values, use_argmax=False):
+    if use_argmax:
+        return np.argmax(pi_values)
+
     return np.random.choice(len(pi_values), p=pi_values)
 
 # Original equivalent code was:
