@@ -109,15 +109,22 @@ class GameACFFNetwork(GameACNetwork):
     GameACNetwork.__init__(self, action_size, device)
     
     with tf.device(self._device):
-      self.W_conv1 = self._conv_weight_variable([8, 4, 4, 16])  # stride=4
-      self.b_conv1 = self._conv_bias_variable([16], 8, 4, 4)
 
-      self.W_conv2 = self._conv_weight_variable([8, 4, 16, 32]) # stride=2
-      self.b_conv2 = self._conv_bias_variable([32], 8, 4, 16)
+      # 8 ... length of a filter
+      # 2nd dim is 1 since we have a one dimensional input
+      # 16 filters in total
+      self.W_conv1 = self._conv_weight_variable([8, 1, len(FEATURES_LIST), 16])  # stride=4
+      self.b_conv1 = self._conv_bias_variable([16], 8, 1, 1)
+
+      # 32 filters in total
+      # with a size of 1x1 - does this make sense?
+      self.W_conv2 = self._conv_weight_variable([1, 1, 16, 32]) # stride=2
+      self.b_conv2 = self._conv_bias_variable([32], 1, 1, 16)
 
       self.W_fc1 = self._fc_weight_variable([2592, 256])
-      self.b_fc1 = self._fc_bias_variable([256], 2592)
+      self.b_fc1 = self._fc_bias_variable([256], 2592 )
 
+      # 256 must be larger than SEQUENCE_LENGTH
       # weight for policy output layer
       self.W_fc2 = self._fc_weight_variable([256, action_size])
       self.b_fc2 = self._fc_bias_variable([action_size], 256)
@@ -126,22 +133,20 @@ class GameACFFNetwork(GameACNetwork):
       self.W_fc3 = self._fc_weight_variable([256, 1])
       self.b_fc3 = self._fc_bias_variable([1], 256)
 
-      # state (input)
-      #self.s = tf.placeholder("float", [None, 84, 84, 4])
-      self.s = tf.placeholder("float", [None, 84, 84])
-    
-      h_conv1 = tf.nn.relu(self._conv2d(self.s, self.W_conv1, 4) + self.b_conv1)
+      self.s = tf.placeholder("float", [None, SEQUENCE_LENGTH, 1, len(FEATURES_LIST)])
+
+      h_conv1 = tf.nn.relu(self._conv2d(self.s, self.W_conv1, 1) + self.b_conv1)
       h_conv2 = tf.nn.relu(self._conv2d(h_conv1, self.W_conv2, 2) + self.b_conv2)
 
       h_conv2_flat = tf.reshape(h_conv2, [-1, 2592])
       h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, self.W_fc1) + self.b_fc1)
-
+    
       # policy (output)
       self.pi = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
       # value (output)
       v_ = tf.matmul(h_fc1, self.W_fc3) + self.b_fc3
       self.v = tf.reshape( v_, [-1] )
-      print("SHAPE ", self.v.get_shape())
+      #print("SHAPE ", self.v.get_shape())
 
   def run_policy_and_value(self, sess, s_t):
     pi_out, v_out = sess.run( [self.pi, self.v], feed_dict = {self.s : [s_t]} )
@@ -185,6 +190,7 @@ class GameACLSTMNetwork(GameACNetwork):
       # lstm
       self.lstm = CustomBasicLSTMCell(256)
 
+      # 256 must be larger than SEQUENCE_LENGTH
       # weight for policy output layer
       self.W_fc2 = self._fc_weight_variable([256, action_size])
       self.b_fc2 = self._fc_bias_variable([action_size], 256)
@@ -239,8 +245,6 @@ class GameACLSTMNetwork(GameACNetwork):
       # in OK  tensorflow/core/kernels/logging_ops.cc:79] NN This is self.v: [-0.036351625]
       #I tensorflow/core/kernels/logging_ops.cc:79] NN This is self.pi: [0.49193981 0.50806022]
       #I tensorflow/core/kernels/logging_ops.cc:79] NN This is self.v: [-0.03456594]
-
-      print("SHAPE ", self.v)
 
       self.reset_state()
       print("Initializing Network finished")
