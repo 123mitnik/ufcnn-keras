@@ -8,24 +8,39 @@ import time
 import datetime
 import itertools
 
+from constants import FILENAMES, STORE_PATH, FEATURES_LIST, COLGROUPS, UNMODIFIED_GROUP, BID_COL, ASK_COL
+
 
 class DataStore(object):
     """ Load and Store Data from the Trading Competition """
 
-    def __init__(self, sequence_length=500, features_list=[1,2,3,4], path='./training_data_large/', training_days=0, testing_days = 0, mean = None, std = None):
-        """ 
-             if data is already stored in pickle format, read it from dist, otherwise create it 
-             path ... where to find the training data to load 
-             training_days ... how many days are needed for training
-             testing_days  ... how many days are needed for testing, is 0 if only training is used
-                   if testing_days <> 0, then test data will be loaded
+    def __init__(self, sequence_length=500, training_days=0, testing_days=0, mean=None, std=None, debug=False):
 
         """ 
+             if data is already stored in pickle format, read it from dist, otherwise create it 
+             training_days ... how many days are needed for training
+             testing_days  ... how many days are needed for testing, is 0 if only training is used
+                               if testing_days <> 0, then test data will be loaded
+
+        """ 
+
+        path = STORE_PATH
+        filenames = FILENAMES
+        features_list = FEATURES_LIST
+        colgroups = COLGROUPS
+        unmodified_group = UNMODIFIED_GROUP 
+        bid_col = BID_COL
+        ask_col = ASK_COL
+
+        bid_col_str = 'U' + str(bid_col)
+        ask_col_str = 'U' + str(ask_col)
+
         self.sequence_length = sequence_length
         self.Xdf_array_list = []
         self.XdfBidAsk_array_list = []
         self.Xdf_array_day = []
         self.features_length = len(features_list) + 2 # Bid & Ask get appended onto the features list
+
 
         if testing_days == 0: 
             if mean is not None or std is not None:
@@ -46,10 +61,10 @@ class DataStore(object):
             Xdf = pd.read_pickle(output_file_name)
         else:
 	    # We need to create the file ourselves...
-            file_list = sorted(glob.glob(path+'/prod_data_*v.txt'))
+            file_list = sorted(glob.glob(path+'/'+filenames))
 
             if len(file_list) == 0:
-                print ("Files "+path+"prod_data_*txt are needed. Please copy them into "+path+". Aborting.")
+                print ("Files "+path+"/"+filenames+" are needed. Please copy them into "+path+". Aborting.")
                 raise ValueError
 
             if testing_days != 0: 
@@ -71,12 +86,16 @@ class DataStore(object):
                 # load dataframes and reindex
                 Xdf_loc = pd.read_csv(filename, sep=" ", header = None,)
 
-                # print(Xdf_loc.iloc[:3])
+                if debug:
+                    print("Initial Dataframe")
+                    print(Xdf_loc.iloc[:10])
 
                 Xdf_loc['Milliseconds'] = Xdf_loc[0]
                 Xdf_loc['Date'] = pd.to_datetime(date_ux*1000*1000*1000)
                 Xdf_loc = Xdf_loc.set_index(['Date', 'Milliseconds'], append=False, drop=True)
-                # print(Xdf_loc.iloc[:3])
+                if debug:
+                    print("Indexed Dataframe")
+                    print(Xdf_loc.iloc[:10])
 
                 Xdf = pd.concat([Xdf, Xdf_loc])
                 #print(Xdf.index[0])
@@ -89,12 +108,16 @@ class DataStore(object):
 
 
         #select by features_list
-        colgroups = [[2, 4], [3, 5]]
+        #colgroups = [[2, 4], [3, 5]]# # from above
       
         # keep the bid and ask unmodified
-        unmodified_group = [2,4]
+        # unmodified_group = [2,4] # from above
         self.Xdf, self.mean, self.std = self.standardize_inputs(Xdf, colgroups=colgroups, mean=mean, std=std, unmodified_group=unmodified_group)
-        self.XdfBidAsk = self.Xdf[[2,4,'U2','U4']]
+        self.XdfBidAsk = self.Xdf[[bid_col,ask_col,bid_col_str,ask_col_str]]
+        if debug:
+            print("Bid Ask Dataframe")
+            print(self.XdfBidAsk.iloc[:10])
+
 
 
         # split the Xdf along the days... 
@@ -104,9 +127,13 @@ class DataStore(object):
             self.Xdf_array_day.append(date_idx)
 
         ## TODO remove ?
-        self.Xdf['U2'] = 0.
-        self.Xdf['U4'] = 0.
+        self.Xdf[bid_col_str] = 0.
+        self.Xdf[ask_col_str] = 0.
         self.Xdf = self.Xdf[features_list]
+        if debug:
+            print("Final Dataframe")
+            print(self.Xdf.iloc[:10])
+
 
         ###print("Xdf")
         ###print(self.Xdf)
