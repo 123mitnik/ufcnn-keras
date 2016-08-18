@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import numpy as np
-#import cv2
-#from ale_python_interface import ALEInterface
-
 
 from constants import ACTION_SIZE
 from constants import SEQUENCE_LENGTH
@@ -18,7 +15,6 @@ from Trading import Trading
 
 class GameState(object):
   def __init__(self, rand_seed, display=False, no_op_max=27, testing=False, show_trades=None):
-    #self.ale = ALEInterface()
 
     np.random.seed(rand_seed)
     self._no_op_max = no_op_max
@@ -43,10 +39,7 @@ class GameState(object):
     self.old_x = 0.
 
     # collect minimal action set
-    #self.real_actions = self.ale.getMinimalActionSet()
     self.real_actions = [0, 1, 2]
-
-    # height=210, width=160
 
     self.reset()
 
@@ -56,30 +49,16 @@ class GameState(object):
 
     reward, terminal, _screen = self.environment.get_reward(action) # Screen is 84 x 84
     x_t = _screen
-
-    # screen shape is (210, 160, 1)
-    #self.ale.getScreenGrayscale(self._screen)
-    
-    # reshape it into (210, 160)
-    #reshaped_screen = np.reshape(self._screen, (210, 160))
-    
-    # resize to height=110, width=84
-    #resized_screen = cv2.resize(reshaped_screen, (84, 110))
-    
-    #x_t = resized_screen[18:102,:]
-
     x_t = x_t.astype(np.float32)
 
     x1 = x_t[1,0]
     x2 = x_t[2,0]
 
     #print(x_t)
-   
 
     if reshape:
         #x_t = np.reshape(x_t, (x_t.shape[0],1 , x_t.shape[1]))
         pass
-
   
     #if (x1 != self.old_x):
     #    print(" X error", x1, x2)
@@ -93,14 +72,13 @@ class GameState(object):
     print("setup_display() is not implemented...")
 
   def reset(self):
-    #self.ale.reset_game()
     self.environment.reset()
     
     # randomize initial state
     if self._no_op_max > 0:
       no_op = np.random.randint(0, self._no_op_max + 1)
       for _ in range(no_op):
-         _, __, ___ = self.environment.get_reward(2) # Screen is 84 x 84
+         _, __, ___ = self.environment.get_reward(2)
 
 
     _, _, x_t = self._process_frame(2, False) # Action GO_FLAT
