@@ -45,9 +45,6 @@ UNMODIFIED_GROUP = [3,4,6]
 BID_COL = 4 
 ASK_COL = 6
 
-
-
-=======
 # Trading fee (per roundturn)
 # Stefan: AMP/XTRADER/TTNET: FDAX = 0.125P per roundturn
 TRADING_FEE = 0.125
