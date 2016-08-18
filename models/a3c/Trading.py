@@ -4,8 +4,6 @@ import numpy as np
 np.set_printoptions(threshold=np.inf)
 import random
 
-import DataStore
-
 from constants import TRADING_FEE
 from constants import SHOW_TRADES
 
