@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 class Trading(object):
 
-    def __init__(self, data_store=None, sequence_length=500, features_length=32, testing=False, show_trades=None ):
+    def __init__(self, data_store=None, sequence_length=500, testing=False, show_trades=None ):
      
         self.data_store = data_store
         self.training_days = data_store.get_number_days()
@@ -27,10 +27,6 @@ class Trading(object):
 
         self.position_store = {}
         self.initrate_store = {}
-        self.features_length = features_length
-        # Will be broadcasted to the other Modules. Change if changing actions below...
-        self.action_count = 3
-        self.trading_fee = 0.2
         self.testing = testing
         self.iday = -1 # for testing
         if show_trades is None:
