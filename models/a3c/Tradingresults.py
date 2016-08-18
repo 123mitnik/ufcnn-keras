@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 import tensorflow as tf
 import numpy as np
-import random
 
 from a3c_util import choose_action
 from game_state import GameState
 from game_ac_network import GameACFFNetwork, GameACLSTMNetwork
-from a3c_training_thread import A3CTrainingThread
-from rmsprop_applier import RMSPropApplier
 
 from constants import ACTION_SIZE
 from constants import PARALLEL_SIZE
 from constants import CHECKPOINT_DIR
-from constants import RMSP_EPSILON
-from constants import RMSP_ALPHA
-from constants import GRAD_NORM_CLIP
 from constants import USE_GPU
 from constants import USE_LSTM
 
@@ -27,24 +21,6 @@ if USE_LSTM:
   global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
 else:
   global_network = GameACFFNetwork(ACTION_SIZE, device)
-
-learning_rate_input = tf.placeholder("float")
-
-grad_applier = RMSPropApplier(learning_rate = learning_rate_input,
-                              decay = RMSP_ALPHA,
-                              momentum = 0.0,
-                              epsilon = RMSP_EPSILON,
-                              clip_norm = GRAD_NORM_CLIP,
-                              device = device)
-
-training_threads = []
-for i in range(PARALLEL_SIZE):
-  training_thread = A3CTrainingThread(i, global_network, 1.0,
-                                      learning_rate_input,
-                                      grad_applier,
-                                      8000000,
-                                      device = device)
-  training_threads.append(training_thread)
 
 sess = tf.Session()
 init = tf.initialize_all_variables()
@@ -64,7 +40,7 @@ testing_days = TESTING_DAYS
 total_pnl = 0
 
 for i in range(testing_days):
-    print("Working on day ",i)
+    print("Working on day ", i)
     terminal = False
     daily_pnl = 0
 
@@ -79,7 +55,6 @@ for i in range(testing_days):
         game_state.process(action)
 
         reward = game_state.reward
-
         terminal = game_state.terminal
 
         game_state.update()
@@ -89,11 +64,11 @@ for i in range(testing_days):
     total_pnl += daily_pnl
     game_state.environment.daily_pnl = 0
 
-    print("Day ",i, ",Realized PnL: ", daily_pnl)
+    print("Day ", i, ",Realized PnL: ", daily_pnl)
+    
 print("Total Realized PnL: ", total_pnl)
 
 
 for i in range(testing_days):
-    print("Potting day ",i)
-    
+    print("Potting day ", i)
 

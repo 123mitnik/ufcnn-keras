@@ -47,7 +47,7 @@ ASK_COL = 6
 
 
 
-
+=======
 # Trading fee (per roundturn)
 # Stefan: AMP/XTRADER/TTNET: FDAX = 0.125P per roundturn
 TRADING_FEE = 0.125
