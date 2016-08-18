@@ -140,8 +140,7 @@ print('Conf: Now saving data. Please wait. Steps:', global_t)
 for t in train_threads:
     t.join()
 
-if not os.path.exists(CHECKPOINT_DIR):
-    os.mkdir(CHECKPOINT_DIR)
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 saver.save(sess, CHECKPOINT_DIR + '/' + 'checkpoint', global_step = global_t)
 end_time = time.time()
