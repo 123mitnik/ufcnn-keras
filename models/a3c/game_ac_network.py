@@ -140,7 +140,7 @@ class GameACFFNetwork(GameACNetwork):
 
       h_conv2_flat = tf.reshape(h_conv2, [-1, 2592])
       h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, self.W_fc1) + self.b_fc1)
-    
+
       # policy (output)
       self.pi = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
       # value (output)
