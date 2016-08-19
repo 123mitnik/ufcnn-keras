@@ -12,9 +12,6 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 
-
-
-
 class Trading(object):
 
     def __init__(self, data_store=None, sequence_length=500, features_length=32, testing=False, show_trades=None ):
@@ -26,11 +23,9 @@ class Trading(object):
         # Will be broadcasted to the other Modules. Change if changing actions below...
         self.testing = testing
         self.iday = -1 # for testing
-        if show_trades is None:
-            self.show_trades = SHOW_TRADES
-        else:
-            self.show_trades = show_trades
-        self.trade_history=[]
+
+        show_trades = SHOW_TRADES if show_trades is None else show_trades
+        self.trade_history = []
 
         #print("TRADING: Testing is" ,self.testing)
         #for i in range (self.data_store.get_number_days()):
@@ -64,7 +59,7 @@ class Trading(object):
         self.daily_long_trades = 0
         self.daily_short_trades = 0
         self.daily_wins = 0.
-        self.trade_history=[]
+        self.trade_history = []
 
     def create_plot(self, testday):
         self.iday = testday
@@ -178,8 +173,8 @@ class Trading(object):
                     close_trade = True
 
         if close_trade and self.show_trades:
-                print("CLOSE: ", self.current_index, last_position, self.initrate, self.last_pnl)
-                self.trade_history.append((self.current_index, self.last_pnl))
+            print("CLOSE: ", self.current_index, last_position, self.initrate, self.last_pnl)
+            self.trade_history.append((self.current_index, self.last_pnl))
 
         # move to the next time step...
         self.current_index += 1
@@ -234,4 +229,4 @@ class Trading(object):
             print ("Daily: iday/index/pnl$/win$/short/long/", self.iday, self.current_index, 
                 self.daily_pnl, self.daily_wins, self.daily_short_trades, self.daily_long_trades)
 
-        return reward, terminal, screen # Screen is 84 x 84 i
+        return reward, terminal, screen
