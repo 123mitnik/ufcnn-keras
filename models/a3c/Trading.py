@@ -24,7 +24,7 @@ class Trading(object):
         self.testing = testing
         self.iday = -1 # for testing
 
-        show_trades = SHOW_TRADES if show_trades is None else show_trades
+        self.show_trades = SHOW_TRADES if show_trades is None else show_trades
         self.trade_history = []
 
         #print("TRADING: Testing is" ,self.testing)
