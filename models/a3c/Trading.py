@@ -22,13 +22,8 @@ class Trading(object):
         self.data_store = data_store
         self.training_days = data_store.get_number_days()
         self.sequence_length = sequence_length
-
-        self.position_store = {}
-        self.initrate_store = {}
         self.features_length = features_length
         # Will be broadcasted to the other Modules. Change if changing actions below...
-        self.action_count = 3
-        self.trading_fee = 0.2
         self.testing = testing
         self.iday = -1 # for testing
         if show_trades is None:
@@ -153,7 +148,6 @@ class Trading(object):
 
                     self.position = -1 # SHORT TRADES, otherwise 0
                     if True: # SHORT TRADES, otherwise False
-                        initrate_norm = self.current_rate_bid_norm # SELL at the BID
                         self.initrate = self.current_rate_bid # SELL at the BID
                         self.new_trade = True
                         fee = - TRADING_FEE * abs(self.position)
@@ -169,7 +163,6 @@ class Trading(object):
                     if debug:
                         print("Going LONG: ",index, self.current_rate_bid)
                     self.initrate = self.current_rate_ask # BUY at the ASK
-                    initrate_norm = self.current_rate_ask_norm # 
                     self.position = 1 # only 1 contract LONG
                     self.new_trade = True
                     fee = - TRADING_FEE * abs(self.position)
