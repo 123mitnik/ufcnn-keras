@@ -238,6 +238,7 @@ class Trading(object):
 
         screen = np.resize(inputs, (self.sequence_length,1,self.features_length))
         if terminal:
-            print ("Daily: index/pnl$/win$/short/long/", self.current_index, self.daily_pnl, self.daily_wins, self.daily_short_trades, self.daily_long_trades)
+            print ("Daily: iday/index/pnl$/win$/short/long/", self.iday, self.current_index, 
+                self.daily_pnl, self.daily_wins, self.daily_short_trades, self.daily_long_trades)
 
         return reward, terminal, screen # Screen is 84 x 84 i
