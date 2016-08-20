@@ -45,13 +45,11 @@ UNMODIFIED_GROUP = [3,4,6]
 BID_COL = 4 
 ASK_COL = 6
 
-# Trading fee (per roundturn)
-# Stefan: AMP/XTRADER/TTNET: FDAX = 0.125P per roundturn
-TRADING_FEE = 0.125
 # Trading fee (per roundturn and contract)
 # Positive value, same units as price, gets subtracted from PnL
 # Developer: FX = 0.00015
 # Stefan:    FDAX = 0.125 (AMP/XTRADER/TTNET)
+TRADING_FEE = 0.125
 
 SHOW_TRADES = False # Default, can be overwritten when calling GameState() or Trading()
 
