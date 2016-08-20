@@ -11,8 +11,40 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
+class Trade:
+    '''
+    Encapsulate a trade
+    Statistics can be calculated from a list of trades
+    '''
 
-class Trading(object):
+    def __init__(self, position, entry_index, entry_bid_price, entry_ask_price):
+        assert position is not None and position != 0
+        self.position = position
+        self.entry_index = entry_index
+        self.exit_index = None
+        self.entry_price = entry_ask_price if position > 0 else entry_bid_price
+        self.exit_price = None
+        self.entry_spread = entry_ask_price - entry_bid_price
+        self.fee = TRADING_FEE
+
+    def close(self, exit_index, exit_bid_price, exit_ask_price):
+        self.exit_index = exit_index
+        self.exit_price = exit_bid_price if self.position > 0 else exit_ask_price
+
+    def is_long(self):
+        return self.position > 0
+
+    def is_short(self):
+        return self.position < 0
+
+    def pnl(self):
+        if self.entry_price is None or self.exit_price is None:
+            return None
+        else:
+            return self.position * (self.exit_price - self.entry_price) - self.position*self.fee
+
+
+class Trading:
 
     def __init__(self, data_store=None, sequence_length=500, features_length=32, testing=False, show_trades=None):
      
@@ -20,12 +52,10 @@ class Trading(object):
         self.training_days = data_store.get_number_days()
         self.sequence_length = sequence_length
         self.features_length = features_length
-        # Will be broadcasted to the other Modules. Change if changing actions below...
         self.testing = testing
         self.iday = -1 # for testing
 
         self.show_trades = SHOW_TRADES if show_trades is None else show_trades
-        self.trade_history = []
 
         #print("TRADING: Testing is" ,self.testing)
         #for i in range (self.data_store.get_number_days()):
@@ -42,24 +72,14 @@ class Trading(object):
                 self.iday = 0
 
         self.day_length = self.data_store.get_day_length(self.iday)
+        self.current_index = self.sequence_length
+        print("IDAY:" , self.iday, self.current_index)
 
-        self.current_index = int(self.sequence_length)
-
-        # Current position
-        self.position = 0.
-        self.initrate = 0.
-        print ("IDAY:" , self.iday, self.current_index)
+        # Current trade and daily trade history (see Trade class)
+        self.trade = None
+        self.trades = []
    
-        self.current_rate_bid_norm, self.current_rate_bid, self.current_rate_ask_norm, self.current_rate_ask = self.data_store.get_bid_ask(self.iday, self.current_index)
-
-        # Trade statistics
-        self.daily_pnl = 0.
-        self.last_pnl = 0.
-        self.daily_trades = 0
-        self.daily_long_trades = 0
-        self.daily_short_trades = 0
-        self.daily_wins = 0.
-        self.trade_history = []
+        _, self.current_rate_bid, _, self.current_rate_ask = self.data_store.get_bid_ask(self.iday, self.current_index)
 
     def create_plot(self, testday):
         self.iday = testday
@@ -86,16 +106,16 @@ class Trading(object):
         total_pnl = 0.
 
         # and create a plot of the trades
-        for position, pnl in self.trade_history:
-            plot_x.append(position)
-            total_pnl += pnl
+        for tr in self.trades:
+            plot_x.append(tr.entry_index)
+            total_pnl += tr.pnl()
             plot_y.append(total_pnl)
 
         #print(plot_x)
         #print(plot_y)
 
         fig = plt.figure()
-        plt.plot(plot_x, plot_y,'.')
+        plt.plot(plot_x, plot_y, '.')
 
         plt.xlabel('ticks')
         plt.ylabel('Realized PnL')
@@ -103,130 +123,128 @@ class Trading(object):
         plt.savefig("PnL_"+str(testday)+".png")
         plt.close(fig)
 
+    def position(self):
+        return 0 if self.trade is None else self.trade.position
 
     def get_reward(self, action):
-        """ #reward, terminal, self._screen = get_reward(action) # Screen is 84 x 8 i
+        """ #reward, terminal, self._screen = get_reward(action)
         This is the version without sliding
         added a term in get_reward that adds winning trades twice to the reward - 
            once each tick it lasts (here winning and losing trades are treated equally), 
            and when closing a winning trade, the winning amount is credited again. 
            So reward != pnl. See daily_pnl instead.
         """
-        reward = 0.
-        fee = 0.
-
-        debug = False
+        debug = False   # enables some prints
      
         #store the last rates...
         last_rate_bid = self.current_rate_bid
         last_rate_ask = self.current_rate_ask
+
         terminal = False
-        self.new_trade = False
-        close_trade = False
- 
-        OFFSET = 0
-        last_position = self.position
+        opened_trade = None
+        closed_trade = None
 
         #print("day length ", self.day_length, self.iday,  self.current_index )
-        if self.current_index >= self.day_length - 2 - OFFSET:
-            if abs(self.position) > 0.1:
-                close_trade = True
+
+        if self.current_index >= self.day_length - 2:
+            # Close our position at the end of the day
+            if self.trade is not None:
+                self.trade.close(self.current_index, self.current_rate_bid, self.current_rate_ask)
+                closed_trade = self.trade
+                self.trade = None
             terminal = True
-            self.position = 0 
         else:
             if action == 0: # STAY/GO_SHORT
-                if self.position >- 0.1:
-                    if self.position > 0.1:
-                        close_trade = True
+                if self.position() >= 0:
                     if debug:
-                        print("Going SHORT: ", index, self.current_rate_bid)
+                        print("Going SHORT: ", self.current_index, self.current_rate_bid)
 
-                    self.position = -1 # SHORT TRADES, otherwise 0
-                    if True: # SHORT TRADES, otherwise False
-                        self.initrate = self.current_rate_bid # SELL at the BID
-                        self.new_trade = True
-                        fee = - TRADING_FEE * abs(self.position)
-                        last_rate_ask = self.initrate # for correct & simple position calculation
-                        self.daily_trades += 1
-                        self.daily_short_trades += 1
+                    if self.position() > 0:
+                        self.trade.close(self.current_index, self.current_rate_bid, self.current_rate_ask)
+                        closed_trade = self.trade
 
-            if action == 1: # STAY/GO_LONG 
-                #if self.position == 0:
-                if self.position < 0.1:
-                    if self.position < -0.1:
-                        close_trade = True
+                    self.trade = Trade(-1, self.current_index, self.current_rate_bid, self.current_rate_ask)
+                    opened_trade = self.trade
+
+            elif action == 1: # STAY/GO_LONG
+                if self.position() <= 0:
                     if debug:
-                        print("Going LONG: ", index, self.current_rate_bid)
-                    self.initrate = self.current_rate_ask # BUY at the ASK
-                    self.position = 1 # only 1 contract LONG
-                    self.new_trade = True
-                    fee = - TRADING_FEE * abs(self.position)
-                    last_rate_bid = self.initrate # for correct & simple position calculation
-                    self.daily_trades += 1
-                    self.daily_long_trades += 1
+                        print("Going LONG:  ", self.current_index, self.current_rate_ask)
 
-            if action == 2: # STAY/GO_FLAT
-                if abs(self.position) == 1: ## make useless
+                    if self.position() < 0:
+                        self.trade.close(self.current_index, self.current_rate_bid, self.current_rate_ask)
+                        closed_trade = self.trade
+
+                    self.trade = Trade(+1, self.current_index, self.current_rate_bid, self.current_rate_ask)
+                    opened_trade = self.trade
+
+            elif action == 2: # STAY/GO_FLAT
+                if self.position() != 0:
                     if debug:
                         print("Going FLAT: ",index, self.current_rate_bid)
-                    self.position = 0 
-                    close_trade = True
 
-        if close_trade and self.show_trades:
-            print("CLOSE: {:6} {:+2} {} {}".format(self.current_index, last_position, self.initrate, self.last_pnl))
-            self.trade_history.append((self.current_index, self.last_pnl))
+                    self.trade.close(self.current_index, self.current_rate_bid, self.current_rate_ask)
+                    closed_trade = self.trade
+                    self.trade = None
+
+        # Close trade, append to history
+        if closed_trade is not None:
+            tr = closed_trade
+            self.trades.append(tr)
+            if self.show_trades:
+                print("CLOSE: {:6} {:+2} entry {} exit {} = {:+8.4f}".format(tr.exit_index, tr.position, 
+                    tr.entry_price, tr.exit_price, tr.pnl()))
+
+        # New trade is opened
+        if opened_trade is not None:
+            tr = opened_trade
+            if self.show_trades:
+                print("OPEN:  {:6} {:+2} entry {}".format(tr.entry_index, tr.position, tr.entry_price))
 
         # move to the next time step...
         self.current_index += 1
 
         # and get the rates...
-        self.current_rate_bid_norm, self.current_rate_bid, self.current_rate_ask_norm, self.current_rate_ask = self.data_store.get_bid_ask(self.iday, self.current_index)
+        _, self.current_rate_bid, _, self.current_rate_ask = self.data_store.get_bid_ask(self.iday, self.current_index)
 
-        # Calculate value
-        # LONG:  CURRENT_BID - INITIAL_ASK
-        # SHORT: CURRENT_ASK - INITIAL_BID
+        # Calculate value and update reward from the current position
+        # Use closing prices of position (BID for LONG, ASK for SHORT)
+        # Note: The bid/ask spread is currently eliminated as a cost factor.
+        #       This avoids "policy saturation" (aka PLOCK, see emails), but needs to be used again later.
         value = 0.
-        if self.position > 0.1:
-            value = self.position * (self.current_rate_bid - last_rate_bid)
-        elif self.position < -0.1:
-            value = self.position * (self.current_rate_ask - last_rate_ask) 
+        if self.position() > 0:
+            value = self.position() * (self.current_rate_bid - last_rate_bid)
+        elif self.position() < 0:
+            value = self.position() * (self.current_rate_ask - last_rate_ask)
 
-        # New trade is opened
-        if self.new_trade:
-            if self.show_trades:
-                print("OPEN:  {:6} {:+2} {}".format(self.current_index-1, self.position, self.initrate))
-            # enforce a minimum holding period (OFFSET)
-            self.current_index += OFFSET 
-
-        # Trade is concluded, do the bookkeeping
-        if close_trade:
-            if self.last_pnl > 0.:
-                reward += self.last_pnl # profits count twice :-)
-                self.daily_wins += self.last_pnl
-            # PnL Calculation
-            self.daily_pnl += self.last_pnl
-            self.last_pnl = 0.
-     
-        # the new profit 
-        # get the reward from the current position
-        reward += value + fee
-        self.last_pnl += value + fee
-
+        # Apply components of reward
         # TODO test reward clipping?
-        # integer 0-255 format 84 * 84
-        # screen 84 * 84 = 7056
-        # 250 * 4 = 1000
-        # 1764 * 4= 1763; sinus 1763 + 6000 lang, sequence = 1764 als kopie, die ersten 4 bytes auf 0 setzen, dort die positionm reinschreiben und den einstandskurs.
-        # sequence mit der laenge aus dem Data Store, dann die position und den init rate norm drauf schlagen in position 1763.
-        # resizen auf 84 * 84.
+        reward = value
+        if opened_trade is not None:
+            pass
+            #reward += opened_trade.entry_spread                        # credit back the bid/ask spread so opening cost is zero
+            #reward -= abs(opened_trade.position) * opened_trade.fee    # apply fee
+        if closed_trade is not None:
+            reward -= abs(closed_trade.position) * closed_trade.fee     # apply fee
+            #if closed_trade.pnl() > 0.:
+            #    reward += closed_trade.pnl()                            # profits count twice :-)
+
+        if debug:
+            print('{} {:+2} {}/{} V {} R {}'.format(self.current_index, self.position(),
+                self.current_rate_bid, self.current_rate_ask, value, reward))
 
         inputs = self.data_store.get_sequence(self.iday, self.current_index).copy()
-  
-        inputs[0,0] = self.position
-
+        # TODO: Why do we set input[0,0] to self.position?
+        inputs[0,0] = self.position()
         screen = np.resize(inputs, (self.sequence_length,1,self.features_length))
+
         if terminal:
-            print ("Daily: iday/index/pnl$/win$/short/long/", self.iday, self.current_index, 
-                self.daily_pnl, self.daily_wins, self.daily_short_trades, self.daily_long_trades)
+            print ("Daily: iday/index/pnl/wins/losses/short/long/", self.iday, self.current_index,
+                sum(t.pnl() for t in self.trades),
+                sum(t.pnl() for t in self.trades if t.pnl() > 0),
+                sum(t.pnl() for t in self.trades if t.pnl() <= 0),
+                len([t for t in self.trades if t.is_short()]),
+                len([t for t in self.trades if t.is_long()]) )
 
         return reward, terminal, screen
+

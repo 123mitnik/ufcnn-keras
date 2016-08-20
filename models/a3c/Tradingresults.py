@@ -62,7 +62,7 @@ for i in range(testing_days):
         game_state.update()
 
     game_state.environment.create_plot(game_state.environment.iday)
-    daily_pnl = game_state.environment.daily_pnl
+    daily_pnl = sum(t.pnl() for t in game_state.environment.trades)
     total_pnl += daily_pnl
     game_state.environment.daily_pnl = 0
 
