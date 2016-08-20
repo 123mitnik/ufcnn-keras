@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 class Trading(object):
 
-    def __init__(self, data_store=None, sequence_length=500, features_length=32, testing=False, show_trades=None ):
+    def __init__(self, data_store=None, sequence_length=500, features_length=32, testing=False, show_trades=None):
      
         self.data_store = data_store
         self.training_days = data_store.get_number_days()
@@ -139,7 +139,7 @@ class Trading(object):
                     if self.position > 0.1:
                         close_trade = True
                     if debug:
-                        print("Going SHORT: ",index, self.current_rate_bid)
+                        print("Going SHORT: ", index, self.current_rate_bid)
 
                     self.position = -1 # SHORT TRADES, otherwise 0
                     if True: # SHORT TRADES, otherwise False
@@ -156,7 +156,7 @@ class Trading(object):
                     if self.position < -0.1:
                         close_trade = True
                     if debug:
-                        print("Going LONG: ",index, self.current_rate_bid)
+                        print("Going LONG: ", index, self.current_rate_bid)
                     self.initrate = self.current_rate_ask # BUY at the ASK
                     self.position = 1 # only 1 contract LONG
                     self.new_trade = True
@@ -173,7 +173,7 @@ class Trading(object):
                     close_trade = True
 
         if close_trade and self.show_trades:
-            print("CLOSE: ", self.current_index, last_position, self.initrate, self.last_pnl)
+            print("CLOSE: {:6} {:+2} {} {}".format(self.current_index, last_position, self.initrate, self.last_pnl))
             self.trade_history.append((self.current_index, self.last_pnl))
 
         # move to the next time step...
@@ -194,7 +194,7 @@ class Trading(object):
         # New trade is opened
         if self.new_trade:
             if self.show_trades:
-                print("OPEN:  ", self.current_index-1, self.position, self.initrate)
+                print("OPEN:  {:6} {:+2} {}".format(self.current_index-1, self.position, self.initrate))
             # enforce a minimum holding period (OFFSET)
             self.current_index += OFFSET 
 
