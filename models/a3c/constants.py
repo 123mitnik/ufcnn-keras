@@ -23,8 +23,7 @@ USE_LSTM = True # True for A3C LSTM, False for A3C FF !!ATTENTION A3C FF is curr
 ### TRADING PARAMETERS
 TRAINING_DAYS = 1
 TESTING_DAYS = 1
-SEQUENCE_LENGTH = 84 * 8 / 4 # = 84 * 84 / 4 - 1
-#
+SEQUENCE_LENGTH = int(84 * 8 / 4) # = 84 * 84 / 4 - 1
 
 
 # SETUP for TRADCOM input data
