@@ -18,9 +18,9 @@ To view the results of an optimisation on the testing days, run `python Tradingr
 
 ## System Requirements
 
-- pythpon 2.7 or 3.x
+- python 3.2 or later
 - TensorFlow
-- numpy, pandas, ...
+- numpy, pandas, matplotlib, ...
 
 
 ## Restrictions
