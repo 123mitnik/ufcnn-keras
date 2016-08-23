@@ -3,7 +3,6 @@ import tensorflow as tf
 import numpy as np
 from custom_lstm import CustomBasicLSTMCell
 from constants import FEATURES_LIST, SEQUENCE_LENGTH
-# TEST
 
 # Actor-Critic Network Base Class
 # (Policy network and Value network)
@@ -75,25 +74,46 @@ class GameACNetwork(object):
   # weight initialization based on muupan's code
   # https://github.com/muupan/async-rl/blob/master/a3c_ale.py
   def _fc_weight_variable(self, shape):
+    """
+        shape[0] ... number of input channels 
+        shape[1] ... number of nodes 
+    """
     input_channels = shape[0]
     d = 1.0 / np.sqrt(input_channels)
     initial = tf.random_uniform(shape, minval=-d, maxval=d)
     return tf.Variable(initial)
 
   def _fc_bias_variable(self, shape, input_channels):
+    """
+        shape[0] ... number of nodes 
+        input channels ... number of input channels 
+    """
     d = 1.0 / np.sqrt(input_channels)
     initial = tf.random_uniform(shape, minval=-d, maxval=d)
     return tf.Variable(initial)  
 
   def _conv_weight_variable(self, shape):
-    w = shape[0]
-    h = shape[1]
-    input_channels = shape[2]
+    """ shape: 
+           shape[0] w ... width of a filter
+           shape[1] h ... height of a filter
+           shape[2]   ... number of input channels
+           shape[3]   ... number of filters in output
+    """
+    w = shape[0] #width of a filter
+    h = shape[1] #height of a filter 
+    input_channels = shape[2] #number of input channels
+
     d = 1.0 / np.sqrt(input_channels * w * h)
     initial = tf.random_uniform(shape, minval=-d, maxval=d)
     return tf.Variable(initial)
 
   def _conv_bias_variable(self, shape, w, h, input_channels):
+    """ shape: 
+           shape[0]  ... number of output channels
+            w ... width of a filter
+            h ... height of a filter
+            input_channels  ... number of input channels
+    """
     d = 1.0 / np.sqrt(input_channels * w * h)
     initial = tf.random_uniform(shape, minval=-d, maxval=d)
     return tf.Variable(initial)
@@ -108,6 +128,7 @@ class GameACFFNetwork(GameACNetwork):
                action_size,
                device="/cpu:0"):
     GameACNetwork.__init__(self, action_size, device)
+    print("Initializing Conv FF Network ")
     
     with tf.device(self._device):
 
@@ -115,7 +136,7 @@ class GameACFFNetwork(GameACNetwork):
       # 2nd dim is 1 since we have a one dimensional input
       # 16 filters in total
       self.W_conv1 = self._conv_weight_variable([8, 1, len(FEATURES_LIST), 16])  # stride=4
-      self.b_conv1 = self._conv_bias_variable([16], 8, 1, 1)
+      self.b_conv1 = self._conv_bias_variable([16], 8, 1, len(FEATURES_LIST))
 
       # 32 filters in total
       # with a size of 1x1 - does this make sense?
@@ -168,6 +189,92 @@ class GameACFFNetwork(GameACNetwork):
             self.W_fc2, self.b_fc2,
             self.W_fc3, self.b_fc3]
 
+# ActorCritic dilated Conv network
+
+class GameACDilatedNetwork(GameACFFNetwork):
+
+  def __init__(self,
+               action_size,
+               device="/cpu:0"):
+    print("Initializing Dilated Conv Network")
+    GameACNetwork.__init__(self, action_size, device)
+
+    
+    with tf.device(self._device):
+
+      self.W_dilconv1 = self._conv_weight_variable([5, 1, len(FEATURES_LIST), 16])  # stride=4
+      self.b_dilconv1 = self._conv_bias_variable([16], 5, 1, len(FEATURES_LIST))
+
+      # 32 filters in total
+      # with a size of 1x1 - does this make sense?
+      self.W_dilconv2 = self._conv_weight_variable([5, 1, 16, 32]) # stride=2
+      self.b_dilconv2 = self._conv_bias_variable([32], 5, 1, 16)
+
+      self.W_dilconv3 = self._conv_weight_variable([5, 1, 32, 32]) # stride=2
+      self.b_dilconv3 = self._conv_bias_variable([32], 5, 1, 32)
+
+      #self.W_fc1 = self._fc_weight_variable([64896, 256]) # When using only 2 dilated levels
+      #self.b_fc1 = self._fc_bias_variable([256], 64896 )
+
+      self.W_fc1 = self._fc_weight_variable([115200, 256]) # for 3 dilation levels
+      self.b_fc1 = self._fc_bias_variable([256], 115200, )
+
+      # 256 must be larger than SEQUENCE_LENGTH
+      # weight for policy output layer
+      self.W_fc2 = self._fc_weight_variable([256, action_size])
+      self.b_fc2 = self._fc_bias_variable([action_size], 256)
+ 
+      # end of replacement
+      # weight for value output layer
+      self.W_fc3 = self._fc_weight_variable([256, 1])
+      self.b_fc3 = self._fc_bias_variable([1], 256)
+
+      self.s = tf.placeholder("float", [None, SEQUENCE_LENGTH, 1, len(FEATURES_LIST)])
+
+      #h_dilconv1 = tf.nn.relu(self._conv2d(self.s, self.W_dilconv1, 1) + self.b_dilconv1)
+      dilation1 = 1
+      dilation2 = 2
+      dilation3 = 3
+      filter_length1 = 5
+      filter_length2 = 5
+      filter_length3 = 5
+      h_dilconv1 = tf.nn.relu(self._dilconv(self.s, self.W_dilconv1, self.b_dilconv1, filter_length1, dilation1))
+      h_dilconv2 = tf.nn.relu(self._dilconv(h_dilconv1, self.W_dilconv2, self.b_dilconv2, filter_length2, dilation2))
+      h_dilconv3 = tf.nn.relu(self._dilconv(h_dilconv2, self.W_dilconv3, self.b_dilconv3, filter_length3, dilation3))
+
+      #h_conv2_flat = tf.reshape(h_dilconv2, [-1, 64896]) # when using 2 dilated levels
+      h_conv2_flat = tf.reshape(h_dilconv3, [-1, 115200])
+
+      h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat, self.W_fc1) + self.b_fc1)
+
+      # policy (output)
+      self.pi = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
+      # value (output)
+      v_ = tf.matmul(h_fc1, self.W_fc3) + self.b_fc3
+      self.v = tf.reshape( v_, [-1] )
+      print("SHAPE ", self.v.get_shape())
+
+  def get_vars(self):
+    return [self.W_dilconv1, self.b_dilconv1,
+            self.W_dilconv2, self.b_dilconv2,
+            self.W_fc1, self.b_fc1,
+            self.W_fc2, self.b_fc2,
+            self.W_fc3, self.b_fc3]
+
+  def _dilconv(self, x, w, b, filter_length, dilation):
+    padding = [[0, 0], [0, 0], [dilation * (filter_length - 1), 0], [0, 0]]
+    x = tf.pad(x, padding)
+    print(x)
+
+    if dilation == 1:
+        x = tf.nn.conv2d(x, w, [1, 1, 1, 1], padding='VALID')
+    else:
+        print("x.shape", x.get_shape())
+        print("w.shape", w.get_shape())
+        x = tf.nn.atrous_conv2d(x, w, dilation, padding='VALID')
+
+    return x + b
+
 # Actor-Critic LSTM Network
 
 class GameACLSTMNetwork(GameACNetwork):
@@ -176,11 +283,11 @@ class GameACLSTMNetwork(GameACNetwork):
                thread_index, # -1 for global
                device="/cpu:0" ):
     GameACNetwork.__init__(self, action_size, device)    
-    print("Initializing Network ")
+    print("Initializing LSTM Network ")
 
     with tf.device(self._device):
       self.W_conv1 = self._conv_weight_variable([8, 1, len(FEATURES_LIST), 16])  # stride=4
-      self.b_conv1 = self._conv_bias_variable([16], 8, 1, 1)
+      self.b_conv1 = self._conv_bias_variable([16], 8, 1, len(FEATURES_LIST))
 
       self.W_conv2 = self._conv_weight_variable([1, 1, 16, 32]) # stride=2
       self.b_conv2 = self._conv_bias_variable([32], 1, 1, 16)
@@ -287,3 +394,5 @@ class GameACLSTMNetwork(GameACNetwork):
             self.lstm.matrix, self.lstm.bias,
             self.W_fc2, self.b_fc2,
             self.W_fc3, self.b_fc3]
+
+

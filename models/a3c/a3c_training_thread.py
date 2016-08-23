@@ -6,12 +6,12 @@ from a3c_util import choose_action
 from accum_trainer import AccumTrainer
 from game_state import GameState
 from game_state import ACTION_SIZE
-from game_ac_network import GameACFFNetwork, GameACLSTMNetwork
+from game_ac_network import GameACFFNetwork, GameACLSTMNetwork, GameACDilatedNetwork
 
 from constants import GAMMA
 from constants import LOCAL_T_MAX
 from constants import ENTROPY_BETA
-from constants import USE_LSTM
+from constants import NETWORK_TYPE
 
 
 class A3CTrainingThread(object):
@@ -28,9 +28,11 @@ class A3CTrainingThread(object):
         self.learning_rate_input = learning_rate_input
         self.max_global_time_step = max_global_time_step
 
-        if USE_LSTM:
+        if NETWORK_TYPE == 'LSTM':
             self.local_network = GameACLSTMNetwork(ACTION_SIZE, thread_index, device)
-        else:
+        elif NETWORK_TYPE == 'DILATED':
+            self.local_network = GameACDilatedNetwork(ACTION_SIZE, device)
+        elif NETWORK_TYPE == 'CONV':
             self.local_network = GameACFFNetwork(ACTION_SIZE, device)
 
         self.local_network.prepare_loss(ENTROPY_BETA)
@@ -89,7 +91,7 @@ class A3CTrainingThread(object):
 
         start_local_t = self.local_t
 
-        if USE_LSTM:
+        if NETWORK_TYPE == 'LSTM':
             start_lstm_state = self.local_network.lstm_state_out
 
         # t_max times loop
@@ -131,7 +133,7 @@ class A3CTrainingThread(object):
 
                 self.episode_reward = 0
                 self.game_state.reset()
-                if USE_LSTM:
+                if NETWORK_TYPE == 'LSTM':
                     self.local_network.reset_state()
                 break
 
@@ -161,7 +163,7 @@ class A3CTrainingThread(object):
             batch_td.append(td)
             batch_R.append(R)
 
-        if USE_LSTM:
+        if NETWORK_TYPE == 'LSTM':
             batch_si.reverse()
             batch_a.reverse()
             batch_td.reverse()

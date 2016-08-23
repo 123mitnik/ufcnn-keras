@@ -5,23 +5,27 @@ import random
 
 from a3c_util import choose_action
 from game_state import GameState
-from game_ac_network import GameACFFNetwork, GameACLSTMNetwork
+from game_ac_network import GameACFFNetwork, GameACLSTMNetwork, GameACDilatedNetwork
 
 from constants import ACTION_SIZE
 from constants import PARALLEL_SIZE
 from constants import CHECKPOINT_DIR
 from constants import USE_GPU
-from constants import USE_LSTM
+from constants import NETWORK_TYPE
 
 from constants import TESTING_DAYS
 
 # use CPU for display tool
 device = "/cpu:0"
 
-if USE_LSTM:
-  global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
+if NETWORK_TYPE == 'LSTM':
+    global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
+elif NETWORK_TYPE == 'DILATED':
+    global_network = GameACDilatedNetwork(ACTION_SIZE, device)
+elif NETWORK_TYPE == 'CONV':
+    global_network = GameACFFNetwork(ACTION_SIZE, device)
 else:
-  global_network = GameACFFNetwork(ACTION_SIZE, device)
+    raise SystemExit('NETWORK_TYPE must be LSTM, CONV or DILATED.')
 
 sess = tf.Session()
 init = tf.initialize_all_variables()

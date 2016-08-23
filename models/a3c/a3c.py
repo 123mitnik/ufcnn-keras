@@ -9,7 +9,7 @@ import math
 import os
 import time
 
-from game_ac_network import GameACFFNetwork, GameACLSTMNetwork
+from game_ac_network import GameACFFNetwork, GameACLSTMNetwork, GameACDilatedNetwork
 from a3c_training_thread import A3CTrainingThread
 from rmsprop_applier import RMSPropApplier
 
@@ -25,7 +25,7 @@ from constants import RMSP_EPSILON
 from constants import RMSP_ALPHA
 from constants import GRAD_NORM_CLIP
 from constants import USE_GPU
-from constants import USE_LSTM
+from constants import NETWORK_TYPE
 
 
 def log_uniform(lo, hi, rate):
@@ -48,10 +48,15 @@ global_t = 0
 
 stop_requested = False
 
-if USE_LSTM:
+if NETWORK_TYPE == 'LSTM':
     global_network = GameACLSTMNetwork(ACTION_SIZE, -1, device)
-else:
+elif NETWORK_TYPE == 'DILATED': 
+    global_network = GameACDilatedNetwork(ACTION_SIZE, device)
+elif NETWORK_TYPE == 'CONV': 
     global_network = GameACFFNetwork(ACTION_SIZE, device)
+else:
+    raise SystemExit('NETWORK_TYPE must be LSTM, CONV or DILATED.')
+
 
 
 training_threads = []
