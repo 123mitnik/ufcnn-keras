@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 from custom_lstm import CustomBasicLSTMCell
 from constants import FEATURES_LIST, SEQUENCE_LENGTH
+# TEST
 
 # Actor-Critic Network Base Class
 # (Policy network and Value network)
