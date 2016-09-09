@@ -235,7 +235,7 @@ class GameACDilatedNetwork(GameACFFNetwork):
       #h_dilconv1 = tf.nn.relu(self._conv2d(self.s, self.W_dilconv1, 1) + self.b_dilconv1)
       dilation1 = 1
       dilation2 = 2
-      dilation3 = 3
+      dilation3 = 4
       filter_length1 = filter_length
       filter_length2 = filter_length
       filter_length3 = filter_length
