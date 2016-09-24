@@ -192,14 +192,14 @@ class Trading:
             tr = closed_trade
             self.trades.append(tr)
             if self.show_trades:
-                print("CLOSE: {:6} {:+2} entry {} exit {} = {:+8.4f}".format(tr.exit_index, tr.position, 
+                print("CLOSE: {:6} {:+2} entry {:9.5f} exit {:9.5f} = {:+8.5f}".format(tr.exit_index, tr.position, 
                     tr.entry_price, tr.exit_price, tr.pnl()))
 
         # New trade is opened
         if opened_trade is not None:
             tr = opened_trade
             if self.show_trades:
-                print("OPEN:  {:6} {:+2} entry {}".format(tr.entry_index, tr.position, tr.entry_price))
+                print("OPEN:  {:6} {:+2} entry {:9.5f}".format(tr.entry_index, tr.position, tr.entry_price))
 
         # move to the next time step...
         self.current_index += 1
