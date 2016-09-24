@@ -44,7 +44,7 @@ class DataStore(object):
 
         if testing_days == 0: 
             if mean is not None or std is not None:
-                print(" When specifiying traiing days only, mean and std must not be given. Aborting.")
+                print(" When specifiying training days only, mean and std must not be given. Aborting.")
                 raise ValueError
 
         if testing_days != 0: 
