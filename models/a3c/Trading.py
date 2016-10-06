@@ -41,7 +41,7 @@ class Trade:
         if self.entry_price is None or self.exit_price is None:
             return None
         else:
-            return self.position * (self.exit_price - self.entry_price) - self.position*self.fee
+            return self.position * (self.exit_price - self.entry_price) - abs(self.position)*self.fee
 
 
 class Trading:
