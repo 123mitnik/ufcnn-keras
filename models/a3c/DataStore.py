@@ -74,14 +74,13 @@ class DataStore(object):
                 start = 0
                 end = training_days
 
-            for filename in file_list[start:end]:
-                print("Working on Input file: ",filename)
-
+            for i, filename in enumerate(file_list[start:end]):
                 # get the date...
                 r = re.compile('^\D*(\d*)\D*', re.UNICODE)
                 date = re.search(r, filename).group(1)
-                print("Date is ",date)
                 date_ux = time.mktime(datetime.datetime.strptime(date,"%Y%m%d").timetuple())
+
+                print("Input file #{:4}, date {}, filename {}".format(i, date, filename))
 
                 # load dataframes and reindex
                 Xdf_loc = pd.read_csv(filename, sep=" ", header = None,)
